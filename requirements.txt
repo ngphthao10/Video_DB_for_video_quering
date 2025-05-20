@@ -1,0 +1,7 @@
+pymongo
+opencv-python
+numpy
+pillow
+opencv-contrib-python
+tqdm
+python-dotenv

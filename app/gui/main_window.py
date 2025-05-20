@@ -1,0 +1,302 @@
+import tkinter as tk
+from tkinter import ttk, messagebox
+from typing import Dict, Any
+
+from app.database_manager import DatabaseManager
+from app.gui.import_dialog import ImportDialog
+from app.gui.video_import_dialog import VideoImportDialog 
+from app.gui.video_player import VideoPlayer
+from app.gui.query_panel import QueryPanel
+
+class MainWindow:
+    
+    def __init__(self, root: tk.Tk, config: Dict[str, Any]):
+        self.root = root
+        self.config = config
+        
+        self.db_manager = DatabaseManager(config)
+        self._setup_ui()        
+        self.current_video_id = None
+    
+    def _setup_ui(self):
+        # Configure root window
+        self.root.columnconfigure(0, weight=1)
+        self.root.rowconfigure(0, weight=1)
+        
+        # Create main frame
+        main_frame = ttk.Frame(self.root)
+        main_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+        main_frame.columnconfigure(0, weight=1)
+        main_frame.columnconfigure(1, weight=3)
+        main_frame.rowconfigure(0, weight=1)
+        
+        # Create menu
+        self._create_menu()
+        
+        # Left panel (controls)
+        left_frame = ttk.Frame(main_frame)
+        left_frame.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
+        
+        # Video selection
+        video_frame = ttk.LabelFrame(left_frame, text="Video Selection")
+        video_frame.pack(fill=tk.X, padx=5, pady=5)
+        
+        # Video dropdown
+        ttk.Label(video_frame, text="Select Video:").pack(anchor=tk.W, padx=5, pady=2)
+        self.video_var = tk.StringVar()
+        self.video_combo = ttk.Combobox(video_frame, textvariable=self.video_var)
+        self.video_combo.pack(fill=tk.X, padx=5, pady=2)
+        self.video_combo.bind("<<ComboboxSelected>>", self._on_video_select)
+        
+        # Button frame for video controls
+        video_button_frame = ttk.Frame(video_frame)
+        video_button_frame.pack(fill=tk.X, padx=5, pady=5)
+        
+        # Refresh button
+        ttk.Button(video_button_frame, text="Refresh Videos", command=self._refresh_videos).pack(side=tk.LEFT, padx=2, pady=2)
+        
+        # Create query panel
+        self.query_panel = QueryPanel(left_frame, self.db_manager, self.config)
+        self.query_panel.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        # Right panel (video player)
+        right_frame = ttk.Frame(main_frame)
+        right_frame.grid(row=0, column=1, sticky="nsew", padx=5, pady=5)
+        
+        # Create video player
+        self.video_player = VideoPlayer(right_frame, self.db_manager, self.config)
+        self.video_player.pack(fill=tk.BOTH, expand=True)
+        
+        # Connect query panel to video player
+        self.query_panel.set_video_player(self.video_player)
+        
+        # Status bar
+        self.status_var = tk.StringVar(value="Ready")
+        status_bar = ttk.Label(self.root, textvariable=self.status_var, relief=tk.SUNKEN, anchor=tk.W)
+        status_bar.grid(row=1, column=0, sticky="ew")
+        
+        # Initial refresh
+        self._refresh_videos()
+    
+    def _create_menu(self):
+        menubar = tk.Menu(self.root)
+        
+        # File menu
+        file_menu = tk.Menu(menubar, tearoff=0)
+        file_menu.add_command(label="Import Dataset", command=self._show_import_dialog)
+        
+        # Add Video Import menu item
+        file_menu.add_command(label="Import Video", command=self._show_video_import_dialog)
+        
+        file_menu.add_separator()
+        file_menu.add_command(label="Exit", command=self.root.quit)
+        
+        # Add file menu to menubar
+        menubar.add_cascade(label="File", menu=file_menu)
+        
+        # Tools menu
+        tools_menu = tk.Menu(menubar, tearoff=0)
+        tools_menu.add_command(label="YOLO Settings", command=self._show_yolo_settings)
+        
+        # Add tools menu to menubar
+        menubar.add_cascade(label="Tools", menu=tools_menu)
+        
+        # Set menubar
+        self.root.config(menu=menubar)
+    
+    def _refresh_videos(self):
+        try:
+            # Get all videos
+            videos = self.db_manager.get_all_videos()
+            
+            # Update combobox values
+            self.video_combo['values'] = [f"{video['name']} ({video['total_frames']} frames)" for video in videos]
+            
+            # Select first video if available
+            if videos and not self.video_var.get():
+                self.video_var.set(f"{videos[0]['name']} ({videos[0]['total_frames']} frames)")
+                self._on_video_select(None)
+            
+            self.status_var.set(f"Found {len(videos)} videos in database")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to refresh videos: {str(e)}")
+            self.status_var.set("Failed to refresh videos")
+    
+    def _on_video_select(self, event):
+        video_selection = self.video_var.get()
+        if video_selection:
+            # Extract video name from the selection
+            if "(" in video_selection:
+                video_name = video_selection.split("(")[0].strip()
+            else:
+                video_name = video_selection
+            
+            # Get video by name
+            video = self.db_manager.get_video_by_name(video_name)
+            if video:
+                # Update current video ID
+                self.current_video_id = video["_id"]
+                
+                # Update video player
+                self.video_player.load_video(self.current_video_id)
+                
+                # Update query panel
+                self.query_panel.set_video_id(self.current_video_id)
+                
+                # Update status bar
+                self.status_var.set(f"Loaded video: {video['name']} ({video['total_frames']} frames)")
+            else:
+                messagebox.showerror("Error", f"Video '{video_name}' not found in database")
+    
+    def _show_import_dialog(self):
+        dialog = ImportDialog(self.root, self.db_manager, self.config)
+        
+        # Refresh videos after dialog closes
+        self.root.wait_window(dialog)
+        self._refresh_videos()
+    
+    def _show_video_import_dialog(self):
+        dialog = VideoImportDialog(self.root, self.db_manager, self.config)
+        
+        # Refresh videos after dialog closes
+        self.root.wait_window(dialog)
+        self._refresh_videos()
+    
+    def _show_yolo_settings(self):
+        YoloSettingsDialog(self.root, self.config)
+
+class YoloSettingsDialog(tk.Toplevel):
+    
+    def __init__(self, parent: tk.Tk, config: Dict[str, Any]):
+        super().__init__(parent)
+        self.parent = parent
+        self.config = config
+        
+        # Set dialog properties
+        self.title("YOLO Settings")
+        self.geometry("500x400")
+        self.resizable(False, False)
+        self.transient(parent)
+        self.grab_set()
+        
+        # Center dialog
+        self.update_idletasks()
+        width = self.winfo_width()
+        height = self.winfo_height()
+        x = (parent.winfo_width() - width) // 2 + parent.winfo_x()
+        y = (parent.winfo_height() - height) // 2 + parent.winfo_y()
+        self.geometry(f"+{x}+{y}")
+        
+        # Setup UI
+        self._setup_ui()
+    
+    def _setup_ui(self):
+        # Main frame
+        main_frame = ttk.Frame(self, padding=10)
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # YOLO settings frame
+        yolo_frame = ttk.LabelFrame(main_frame, text="YOLO Detection Settings")
+        yolo_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        # Get YOLO config
+        yolo_config = self.config.get('yolo', {})
+        
+        # Model selection
+        ttk.Label(yolo_frame, text="Default Model:").grid(row=0, column=0, sticky=tk.W, pady=10, padx=10)
+        
+        yolo_models = ["yolov5n", "yolov5s", "yolov5m", "yolov5l", "yolov5x"]
+        self.model_var = tk.StringVar(value=yolo_config.get('model', 'yolov5s'))
+        model_combo = ttk.Combobox(yolo_frame, textvariable=self.model_var, values=yolo_models, width=15)
+        model_combo.grid(row=0, column=1, sticky=tk.W, pady=10, padx=10)
+        
+        # Model information
+        model_info = {
+            "yolov5n": "Smallest and fastest model, lower accuracy",
+            "yolov5s": "Small model, good balance of speed and accuracy",
+            "yolov5m": "Medium model, better accuracy, slower",
+            "yolov5l": "Large model, high accuracy, even slower",
+            "yolov5x": "Extra large model, highest accuracy, slowest"
+        }
+        
+        self.model_info_var = tk.StringVar(value=model_info.get(self.model_var.get(), ""))
+        model_info_label = ttk.Label(yolo_frame, textvariable=self.model_info_var, wraplength=400)
+        model_info_label.grid(row=0, column=2, sticky=tk.W, pady=10, padx=10)
+        
+        # Update info when model changes
+        model_combo.bind("<<ComboboxSelected>>", lambda e: self.model_info_var.set(model_info.get(self.model_var.get(), "")))
+        
+        # Confidence threshold
+        ttk.Label(yolo_frame, text="Confidence Threshold:").grid(row=1, column=0, sticky=tk.W, pady=10, padx=10)
+        
+        self.confidence_var = tk.DoubleVar(value=yolo_config.get('confidence_threshold', 0.5))
+        confidence_scale = ttk.Scale(
+            yolo_frame, 
+            from_=0.1, 
+            to=1.0, 
+            variable=self.confidence_var,
+            command=lambda val: self.conf_label_var.set(f"{float(val):.2f}")
+        )
+        confidence_scale.grid(row=1, column=1, sticky=tk.EW, pady=10, padx=10)
+        
+        self.conf_label_var = tk.StringVar(value=f"{self.confidence_var.get():.2f}")
+        ttk.Label(yolo_frame, textvariable=self.conf_label_var, width=5).grid(row=1, column=2, sticky=tk.W, padx=10)
+        
+        # IoU threshold
+        ttk.Label(yolo_frame, text="IoU Threshold:").grid(row=2, column=0, sticky=tk.W, pady=10, padx=10)
+        
+        self.iou_var = tk.DoubleVar(value=yolo_config.get('iou_threshold', 0.45))
+        iou_scale = ttk.Scale(
+            yolo_frame, 
+            from_=0.1, 
+            to=1.0, 
+            variable=self.iou_var,
+            command=lambda val: self.iou_label_var.set(f"{float(val):.2f}")
+        )
+        iou_scale.grid(row=2, column=1, sticky=tk.EW, pady=10, padx=10)
+        
+        self.iou_label_var = tk.StringVar(value=f"{self.iou_var.get():.2f}")
+        ttk.Label(yolo_frame, textvariable=self.iou_label_var, width=5).grid(row=2, column=2, sticky=tk.W, padx=10)
+        
+        # Frame skip
+        ttk.Label(yolo_frame, text="Frame Skip:").grid(row=3, column=0, sticky=tk.W, pady=10, padx=10)
+        
+        self.frame_skip_var = tk.IntVar(value=yolo_config.get('frame_skip', 1))
+        frame_skip_entry = ttk.Spinbox(
+            yolo_frame,
+            from_=1,
+            to=30,
+            textvariable=self.frame_skip_var,
+            width=5
+        )
+        frame_skip_entry.grid(row=3, column=1, sticky=tk.W, pady=10, padx=10)
+        
+        ttk.Label(yolo_frame, text="Process every Nth frame").grid(row=3, column=2, sticky=tk.W, padx=10)
+        
+        # Class mapping section
+        mapping_frame = ttk.LabelFrame(main_frame, text="YOLO to VisDrone Class Mapping")
+        mapping_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        ttk.Label(mapping_frame, text="YOLO maps COCO classes to VisDrone classes automatically.").pack(anchor=tk.W, padx=10, pady=5)
+        ttk.Label(mapping_frame, text="Examples: person -> pedestrian, bicycle -> bicycle, etc.").pack(anchor=tk.W, padx=10, pady=5)
+        
+        # Button frame
+        button_frame = ttk.Frame(main_frame)
+        button_frame.pack(fill=tk.X, padx=5, pady=10)
+        
+        ttk.Button(button_frame, text="Save", command=self._save_settings).pack(side=tk.RIGHT, padx=5)
+        ttk.Button(button_frame, text="Cancel", command=self.destroy).pack(side=tk.RIGHT, padx=5)
+    
+    def _save_settings(self):
+        if 'yolo' not in self.config:
+            self.config['yolo'] = {}
+            
+        self.config['yolo']['model'] = self.model_var.get()
+        self.config['yolo']['confidence_threshold'] = self.confidence_var.get()
+        self.config['yolo']['iou_threshold'] = self.iou_var.get()
+        self.config['yolo']['frame_skip'] = self.frame_skip_var.get()
+        
+        from utils.config import save_config
+        save_config(self.config)
+        
+        self.destroy()
