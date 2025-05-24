@@ -51,7 +51,7 @@ class VideoImportDialog(tk.Toplevel):
 
         ttk.Label(yolo_frame, text="Model:").grid(row=0, column=0, sticky=tk.W, pady=5, padx=5)
         
-        yolo_models = ["yolov8n", "yolov8s", "yolov8m", "yolov8l", "yolov8x"]
+        yolo_models = ['yolov8s','yolov8n', 'yolov8m', 'yolov5m', 'yolov5x']
         self.model_var = tk.StringVar(value=self.config.get('yolo', {}).get('model', 'yolov8s'))
         model_combo = ttk.Combobox(yolo_frame, textvariable=self.model_var, values=yolo_models)
         model_combo.grid(row=0, column=1, sticky=tk.EW, pady=5, padx=5)

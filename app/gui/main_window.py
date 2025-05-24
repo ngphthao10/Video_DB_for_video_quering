@@ -54,6 +54,14 @@ class MainWindow:
         
         # Refresh button
         ttk.Button(video_button_frame, text="Refresh Videos", command=self._refresh_videos).pack(side=tk.LEFT, padx=2, pady=2)
+
+            # NEW: Real-time video button
+        ttk.Button(
+            video_button_frame, 
+            text="Real-time Detection", 
+            command=self._show_realtime_player
+        ).pack(side=tk.RIGHT, padx=2, pady=2)
+    
         
         # Create query panel
         self.query_panel = QueryPanel(left_frame, self.db_manager, self.config)
@@ -84,22 +92,12 @@ class MainWindow:
         # File menu
         file_menu = tk.Menu(menubar, tearoff=0)
         file_menu.add_command(label="Import Dataset", command=self._show_import_dialog)
-        
-        # Add Video Import menu item
-        file_menu.add_command(label="Import Video", command=self._show_video_import_dialog)
-        
+                
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self.root.quit)
         
         # Add file menu to menubar
         menubar.add_cascade(label="File", menu=file_menu)
-        
-        # Tools menu
-        tools_menu = tk.Menu(menubar, tearoff=0)
-        tools_menu.add_command(label="YOLO Settings", command=self._show_yolo_settings)
-        
-        # Add tools menu to menubar
-        menubar.add_cascade(label="Tools", menu=tools_menu)
         
         # Set menubar
         self.root.config(menu=menubar)
@@ -164,6 +162,16 @@ class MainWindow:
     
     def _show_yolo_settings(self):
         YoloSettingsDialog(self.root, self.config)
+
+    def _show_realtime_player(self):
+        from app.realtime_video_window import RealTimeVideoWindow
+        
+        video_window = RealTimeVideoWindow(self.root, self.config)
+        
+        if self.current_video_id:
+            video_info = self.db_manager.get_video_info(self.current_video_id)
+            if video_info and 'file_path' in video_info:
+                video_window.set_video_path(video_info['file_path'])
 
 class YoloSettingsDialog(tk.Toplevel):
     
