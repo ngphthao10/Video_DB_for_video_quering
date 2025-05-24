@@ -268,19 +268,3 @@ Video player hiển thị:
 - FPS counter: 25.3 FPS
 - Frame counter: 156/900
 
-### Performance Benchmarks
-
-**Segment Tree Query Performance:**
-- Linear search: 45ms (1000 frames)
-- Segment Tree: 2ms (1000 frames)
-- Speed improvement: ~22x faster
-
-**YOLO Processing Speed:**
-- YOLOv8n: ~35 FPS (GTX 1660)
-- YOLOv8s: ~28 FPS (GTX 1660)  
-- YOLOv8m: ~20 FPS (GTX 1660)
-
-**Database Stats:**
-- 10,000 frames imported: ~2 minutes
-- MongoDB storage: ~500MB (with indexes)
-- Query response time: <100ms average
