@@ -149,7 +149,7 @@ python run.py
 
 #### 3.1 Import Dataset VisDrone
 1. Click menu **File → Import Dataset**
-2. Chọn thư mục chứa dataset VisDrone (có folder `images` và `annotations`)
+2. Chọn thư mục chứa dataset VisDrone (videods-test) (có folder `images` và `annotations`) (đã đính kèm trong repo)
 3. Nhập tên video và FPS
 4. Click **Import** và đợi quá trình hoàn tất
 
