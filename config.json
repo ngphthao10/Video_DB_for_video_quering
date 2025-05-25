@@ -1,0 +1,91 @@
+{
+    "mongodb": {
+        "uri": "mongodb+srv://thaolikesteris:peuBres9vqc0rC9l@videodb.41pmigo.mongodb.net/",
+        "db_name": "visdrone_db"
+    },
+    "classes": [
+        "pedestrian",
+        "people",
+        "bicycle",
+        "car",
+        "van",
+        "truck",
+        "tricycle",
+        "awning-tricycle",
+        "bus",
+        "motor"
+    ],
+    "class_colors": [
+        [
+            255,
+            0,
+            0
+        ],
+        [
+            255,
+            128,
+            0
+        ],
+        [
+            255,
+            255,
+            0
+        ],
+        [
+            0,
+            255,
+            0
+        ],
+        [
+            0,
+            255,
+            255
+        ],
+        [
+            0,
+            0,
+            255
+        ],
+        [
+            255,
+            0,
+            255
+        ],
+        [
+            128,
+            0,
+            255
+        ],
+        [
+            128,
+            128,
+            128
+        ],
+        [
+            255,
+            255,
+            255
+        ]
+    ],
+    "default_fps": 30,
+    "default_dataset_path": "../data",
+    "yolo": {
+        "model": "yolov5n",
+        "confidence_threshold": 0.5,
+        "iou_threshold": 0.45,
+        "frame_skip": 1,
+        "class_mapping": {
+            "0": 0,
+            "1": 2,
+            "2": 3,
+            "3": 9,
+            "5": 8,
+            "7": 5
+        }
+    },
+    "video_import": {
+        "default_video_path": "../videos",
+        "temp_frames_dir": "temp_frames",
+        "max_workers": 4
+    }
+}

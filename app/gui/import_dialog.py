@@ -90,7 +90,7 @@ class ImportDialog(tk.Toplevel):
     
     def _import_dataset(self):
         dataset_path = self.dataset_path_var.get()
-        fps = int(self.fps_var.get())
+        fps = 30
         
         if not dataset_path:
             messagebox.showerror("Error", "Please select a dataset directory")
